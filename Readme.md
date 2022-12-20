@@ -8,20 +8,54 @@ GitHub: https://github.com/BanMing/GAMES-105
 
 A Pose
 
-![](./lab1/images/apose.png)
+<p align=center>
+<img src='./lab1/images/apose.png' width='40%'> 
+</p>
 
 inverse kinematics before
 
-![](./lab1/images/inverse_kinematics_before.png)
-
+<p align=center>
+<img src='./lab1/images/inverse_kinematics_after.png' width='40%'> 
+</p>
 inverse kinematics after
 
-![](./lab1/images/inverse_kinematics_after.png)
+<p align=center>
+<img src='./lab1/images/inverse_kinematics_after.png' width='40%'> 
+</p>
 
 inverse kinematics
 
-![](./lab1/images/inverse_kinematics.png)
+<p align=center>
+<img src='./lab1/images/inverse_kinematics.png' width='40%'> 
+</p>
 
-![](./lab1/images/ik_p2_1.png)
+<p align=center>
+<img src='./lab1/images/ik_p2_1.png' width='40%'> 
+</p>
 
-![](./lab1/images/ik_p2_2.png)
+<p align=center>
+<img src='./lab1/images/ik_p2_2.png' width='40%'> 
+</p>
+
+## Lab2
+
+<p align=center>
+<img src='lab2/images/task1_part1.gif' width='40%'> 
+</p>
+
+blend two motions
+<p align=center>
+<img src='lab2/images/task1_part2.gif' width='40%'>
+</p>
+
+concatenate two motions
+
+<p align=center>
+<img src='lab2/images/task1_part4.gif' width='40%'>
+</p>
+
+motion matching
+
+<p align=center>
+<img src='lab2/images/motion_matching.gif' width='40%'>
+</p>
