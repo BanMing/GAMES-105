@@ -63,7 +63,16 @@ def load_rest_pose(bvh_file_path):
             joint_positions[i] = joint_offset[i]
         else:
             joint_positions[i] = joint_positions[joint_parent[i]] + joint_offset[i]
-        joint_orientations[i, 3] = 1.0
+        if joint_name[i] == "lShoulder":
+            joint_orientations[i] = R.from_euler(
+                "XYZ", [0, 0, -45], degrees=True
+            ).as_quat()
+        elif joint_name[i] == "rShoulder":
+            joint_orientations[i] = R.from_euler(
+                "XYZ", [0, 0, 45], degrees=True
+            ).as_quat()
+        else:
+            joint_orientations[i, 3] = 1.0
 
     return joint_positions, joint_orientations
 
@@ -151,8 +160,33 @@ def part3_retarget_func(T_pose_bvh_path, A_pose_bvh_path):
         两个bvh的joint name顺序可能不一致哦(
         as_euler时也需要大写的XYZ
     """
-    a_joint_positions, a_joint_orientations = load_rest_pose(A_pose_bvh_path)
-    t_joint_positions, t_joint_orientations = load_rest_pose(T_pose_bvh_path)
+    temp_motion_data = load_motion_data(A_pose_bvh_path)
+    
+    A_joint_name, _, _ = part1_calculate_T_pose(A_pose_bvh_path)
+    T_joint_name, _, _ = part1_calculate_T_pose(T_pose_bvh_path)
+    
+    # 储存 A_pose 骨骼的索引映射
+    A_name2index = {}
+    index = 0
+    for A_name in A_joint_name:
+        if ("_end" not in A_name):
+            index += 1
+            A_name2index[A_name] = index
+    
+    # 使用 A_pose 骨骼的索引定位 A_pose 骨骼动画数据，从而映射到相应 T_pose 中的骨骼上
+    motion_data = []
+    for temp_frame_data in temp_motion_data:
+        frame_data = []
+        frame_data.append(temp_frame_data[0:3])
+        for T_name in T_joint_name:
+            if ("_end" not in T_name):
+                frame_data.append(temp_frame_data[A_name2index[T_name] * 3 : A_name2index[T_name] * 3 + 3])
+                # 对肩膀部做特殊的选择，-1表示最后一个元素
+                if (T_name == "lShoulder"):
+                    frame_data[-1][-1] -= 45
+                elif (T_name == "rShoulder"):
+                    frame_data[-1][-1] += 45
+        motion_data.append(np.array(frame_data).reshape(1,-1))
 
-    motion_data = load_motion_data(A_pose_bvh_path)
+    motion_data = np.concatenate(motion_data, axis=0)
     return motion_data

@@ -71,18 +71,22 @@ def part3_retarget(viewer, T_pose_bvh_path, A_pose_bvh_path):
 def main():
     # create a viewer
     viewer = SimpleViewer()
-    bvh_file_path = "lab1/data/A_pose_run.bvh"
+    bvh_file_path = "lab1/data/walk60.bvh"
 
     # 请取消注释需要运行的代码
     # part1
-    part1(viewer, bvh_file_path)
+    # part1(viewer, bvh_file_path)
 
     # part2
     # part2_one_pose(viewer, bvh_file_path)
     # part2_animation(viewer, bvh_file_path)
 
     # part3
-    # part3_retarget(viewer, "lab1/data/walk60.bvh", "lab1/data/A_pose_run.bvh")
+    part3_retarget(viewer, "lab1/data/walk60.bvh", "lab1/data/A_pose_run.bvh")
+    # joint_positions, joint_orientations = load_rest_pose(bvh_file_path)
+    # joint_name, joint_parent, joint_offset = part1_calculate_T_pose(bvh_file_path)
+    # viewer.show_pose(joint_name, joint_positions, joint_orientations)
+    # viewer.run()
 
 
 if __name__ == "__main__":
