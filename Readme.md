@@ -15,7 +15,7 @@ A Pose
 inverse kinematics before
 
 <p align=center>
-<img src='./lab1/images/inverse_kinematics_after.png' width='40%'> 
+<img src='./lab1/images/inverse_kinematics_before.png' width='40%'> 
 </p>
 inverse kinematics after
 
@@ -23,11 +23,7 @@ inverse kinematics after
 <img src='./lab1/images/inverse_kinematics_after.png' width='40%'> 
 </p>
 
-inverse kinematics
-
-<p align=center>
-<img src='./lab1/images/inverse_kinematics.png' width='40%'> 
-</p>
+inverse kinematics animation
 
 <p align=center>
 <img src='./lab1/images/ik_p2_1.png' width='40%'> 
