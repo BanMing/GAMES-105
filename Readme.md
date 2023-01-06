@@ -55,3 +55,15 @@ motion matching
 <p align=center>
 <img src='lab2/images/motion_matching.gif' width='40%'>
 </p>
+
+## LabS
+
+Skinning
+
+<p align=center>
+<img src='labS/images/task0.png' width='40%'>
+</p>
+
+<p align=center>
+<img src='labS/images/task1.gif' width='40%'>
+</p>
