@@ -77,6 +77,48 @@ def load_motion_data(bvh_path):
     return motion_data
 
 
+def get_quat_from_vectors(from_vector, to_vector):
+    # 计算两向量间旋转：https://www.xarg.org/proofquaternion-from-two-vectors/
+    w = np.cross(from_vector, to_vector)
+    d = np.dot(from_vector, to_vector)
+    r = R.from_quat([w[0], w[1], w[2], d + np.sqrt(d * d + np.dot(w, w))])
+    return r.as_quat()
+
+
+def lerp(from_vector, to_vector, t):
+    return (1 - t) * from_vector + t * to_vector
+
+
+def slerp(quat1, quat2, t):
+    quat1 = quat1 / np.linalg.norm(quat1)
+    quat2 = quat2 / np.linalg.norm(quat2)
+
+    ret = np.array([0, 0, 0, 1])
+
+    cos_half_theta = np.sum(np.dot(quat1, quat2))
+    if cos_half_theta < 0:
+        cos_half_theta = -1 * cos_half_theta
+        quat2 = -1 * quat2
+
+    half_theta = np.arccos(cos_half_theta)
+    sin_half_theta = np.sqrt(1 - cos_half_theta * cos_half_theta)
+
+    t_1 = 0.0
+    t_2 = 0.0
+    if np.abs(sin_half_theta) > 1e-5:
+        sin_half_theta_overed_1 = 1 / sin_half_theta
+        t_1 = np.sin((1 - t) * half_theta) * sin_half_theta_overed_1
+        t_2 = np.sin(t * half_theta) * sin_half_theta_overed_1
+    else:
+        t_1 = 1 - t
+        t_2 = t
+
+    ret = t_1 * quat1 + t_2 * quat2
+    ret = ret / np.linalg.norm(ret)
+
+    return ret
+
+
 # ------------- 实现一个简易的BVH对象，进行数据处理 -------------#
 """
 注释里统一N表示帧数，M表示关节数
@@ -223,32 +265,23 @@ class BVHMotion:
 
     # --------------------- 你的任务 -------------------- #
 
-    def decompose_rotation_with_yaxis(self, rotation, target_facing_direction_xz):
+    def decompose_rotation_with_yaxis(self, rotation):
         """
         输入: rotation 形状为(4,)的ndarray, 四元数旋转
         输出: Ry, Rxz，分别为绕y轴的旋转和转轴在xz平面的旋转，并满足R = Ry * Rxz
         """
         Ry = np.zeros_like(rotation)
         Rxz = np.zeros_like(rotation)
-
+        r = R.from_quat(rotation)
         # 本地坐标的朝向
-        # local_dir = [0, 1, 0]
-        # world_dir = [
-        #     target_facing_direction_xz[0], 1, target_facing_direction_xz[1]
-        # ]
-        # # 计算两向量间旋转：https://www.xarg.org/proof/quaternion-from-two-vectors/
-        # w = np.cross(local_dir, world_dir)
-        # d = np.dot(local_dir, world_dir)
-        # r = R.from_quat([w[0], w[1], w[2], d + np.sqrt(d * d + np.dot(w, w))])
+        world_y = [0, 1, 0]
+        local_y = r.apply(world_y)
 
-        # Ry = r * R.from_quat(rotation)
-        # a = Ry.as_euler("XYZ",degrees=True)
-        # Rxz = R.inv(Ry) * rotation
-        target_dir = np.linalg.norm(target_facing_direction_xz)
-        c = np.cross([0, 1], target_facing_direction_xz)
-        angle = np.rad2deg(np.arccos(c))
-        Ry = R.from_euler("XYZ", [0, -45, 0], degrees=True).as_quat()
-        return Ry, Rxz
+        r_ = get_quat_from_vectors(local_y, world_y)
+        Ry = R.from_quat(r_) * r
+        Rxz = Ry.inv() * r
+
+        return Ry.as_quat(), Rxz.as_quat()
 
     # part 1
     def translation_and_rotation(
@@ -272,14 +305,34 @@ class BVHMotion:
         # 比如说，你可以这样调整第frame_num帧的根节点平移
         offset = target_translation_xz - res.joint_position[frame_num, 0, [0, 2]]
         res.joint_position[:, 0, [0, 2]] += offset
-
         # 设置根节点旋转
-        Ry, Rxz = self.decompose_rotation_with_yaxis(
-            self.joint_rotation[frame_num, 0], target_facing_direction_xz
+        Ry, _ = self.decompose_rotation_with_yaxis(self.joint_rotation[frame_num, 0])
+
+        target_dir = np.array(
+            [target_facing_direction_xz[0], 0, target_facing_direction_xz[1]]
         )
-        res.joint_rotation[:, 0, :] = Ry
-        res.joint_position[:, 0] = R.from_quat(res.joint_rotation[:, 0, :]).apply(
-            res.joint_position[:, 0]
+        target_dir = target_dir / np.linalg.norm(target_dir)
+        # 默认z为前方
+        cur_dir = R.from_quat(Ry).apply([0, 0, 1])
+        r0r1_t = R.from_quat(get_quat_from_vectors(cur_dir, target_dir))
+
+        # 更新旋转 R(i) = R0*R1_t*R1(i)
+        res.joint_rotation[:, 0, :] = (
+            r0r1_t * R.from_quat(res.joint_rotation[:, 0, :])
+        ).as_quat()
+
+        # 更新位移 t(i) = R0*R1_t*(t1(i)-t1)+t0
+        cur_translation = res.joint_position[frame_num][0]
+        target_translation = np.array(
+            [
+                target_translation_xz[0],
+                res.joint_position[frame_num][0][1],
+                target_translation_xz[1],
+            ]
+        )
+        res.joint_position[:, 0] = (
+            r0r1_t.apply(res.joint_position[:, 0] - cur_translation)
+            + target_translation
         )
 
         return res
@@ -304,8 +357,30 @@ def blend_two_motions(bvh_motion1, bvh_motion2, alpha):
     )
     res.joint_rotation[..., 3] = 1.0
 
-    # TODO: 你的代码
+    n1 = bvh_motion1.motion_length
+    n2 = bvh_motion2.motion_length
+    n = alpha.shape[0]
 
+    joint_len = len(bvh_motion1.joint_channel)
+    for f in range(n):
+        f1 = f * n1 / n
+        f1_low = int(f1)
+        f1_high = f1_low if f1_low + 1 == n1 else f1_low + 1
+        f1_t = f1 - f1_low
+
+        f2 = f * n2 / n
+        f2_low = int(f2)
+        f2_high = f2_low if f2_low + 1 == n2 else f2_low + 1
+        f2_t = f2 - f2_low
+
+        for j in range(joint_len):
+            trans1 = lerp(bvh_motion1.joint_position[f1_low][j], bvh_motion1.joint_position[f1_high][j], f1_t)
+            trans2 = lerp(bvh_motion2.joint_position[f2_low][j], bvh_motion2.joint_position[f2_high][j], f2_t)
+            res.joint_position[f][j] = lerp(trans1, trans2, alpha[f])
+
+            rot1 = slerp(bvh_motion1.joint_rotation[f1_low][j], bvh_motion1.joint_rotation[f1_high][j], f1_t)
+            rot2 = slerp(bvh_motion2.joint_rotation[f2_low][j], bvh_motion2.joint_rotation[f2_high][j], f2_t)
+            res.joint_rotation[f][j] = slerp(rot1, rot2, alpha[f])
     return res
 
 
