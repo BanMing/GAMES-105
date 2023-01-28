@@ -425,12 +425,10 @@ def concatenate_two_motions(bvh_motion1, bvh_motion2, mix_frame1, mix_time):
     Tips:
         你可能需要用到BVHMotion.sub_sequence 和 BVHMotion.append
     """
-    res = bvh_motion1.raw_copy()
-    res = res.sub_sequence(0, mix_frame1)
 
     # 计算混合是motion2的位移旋转
-    target_translation_xz = res.joint_position[-1, 0, [0, 2]]
-    rot = res.joint_rotation[-1, 0]
+    target_translation_xz = bvh_motion1.joint_position[mix_frame1 - 1, 0, [0, 2]]
+    rot = bvh_motion1.joint_rotation[mix_frame1 - 1, 0]
     target_facing_direction_xz = (
         R.from_quat(rot).apply(np.array([0, 0, 1])).flatten()[[0, 2]]
     )
@@ -438,11 +436,15 @@ def concatenate_two_motions(bvh_motion1, bvh_motion2, mix_frame1, mix_time):
     motion2 = motion2.translation_and_rotation(
         0, target_translation_xz, target_facing_direction_xz
     )
-    
+
     mix_time = motion2.motion_length if motion2.motion_length < mix_time else mix_time
-    
+
     # 计算混合
     mix_motion1 = bvh_motion1.sub_sequence(mix_frame1, mix_frame1 + mix_time)
+    mix_time = (
+        mix_motion1.motion_length if mix_motion1.motion_length < mix_time else mix_time
+    )
+
     mix_motion2 = motion2.sub_sequence(0, mix_time)
     mix = mix_motion1.raw_copy()
 
@@ -454,11 +456,17 @@ def concatenate_two_motions(bvh_motion1, bvh_motion2, mix_frame1, mix_time):
             )
 
         for j in range(len(mix.joint_rotation[i])):
-            mix.joint_rotation[i][j] = lerp(
+            mix.joint_rotation[i][j] = slerp(
                 mix_motion1.joint_rotation[i][j], mix_motion2.joint_rotation[i][j], t
             )
 
-    res.append(mix)
+    if mix_frame1 == 0:
+        res = mix.raw_copy()
+    else:
+        res = bvh_motion1.raw_copy()
+        res = res.sub_sequence(0, mix_frame1 - 1)
+        res.append(mix)
+
     if motion2.motion_length > mix_time:
         res.append(motion2.sub_sequence(mix_time, motion2.motion_length))
     return res
