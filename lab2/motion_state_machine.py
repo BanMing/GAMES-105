@@ -1,5 +1,7 @@
-from xml.etree.ElementTree import tostring
 from answer_task1 import *
+import numpy as np
+import copy
+from scipy.spatial.transform import Rotation as R
 
 mix_time = 10
 
@@ -14,20 +16,21 @@ class MotionState:
         self.mix_motion = None
         self.is_mixing = False
 
-    def start(self, cur_frame, last_state):
+    def start(self, cur_frame, pos, facing_axis):
         self.start_frame = cur_frame
-        last_state_play_frame = last_state.get_cur_play_frame(cur_frame)
-        self.mix_motion = concatenate_two_motions(
-            last_state.motion,
-            self.motion,
-            last_state_play_frame,
-            mix_time,
-        )
-        self.mix_motion = self.mix_motion.sub_sequence(
-            last_state_play_frame, last_state_play_frame + self.motion.motion_length
-        )
-        print(self.mix_motion.motion_length)
-        self.is_mixing = self.mix_motion != None
+        self.motion = self.motion.translation_and_rotation(0, pos, facing_axis)
+        # last_state_play_frame = last_state.get_cur_play_frame(cur_frame)
+        # self.mix_motion = concatenate_two_motions(
+        #     last_state.motion,
+        #     self.motion,
+        #     last_state_play_frame,
+        #     mix_time,
+        # )
+        # self.mix_motion = self.mix_motion.sub_sequence(
+        #     last_state_play_frame, last_state_play_frame + self.motion.motion_length
+        # )
+        # print(self.mix_motion.motion_length)
+        # self.is_mixing = self.mix_motion != None
 
     def check_trans(
         self,
@@ -99,7 +102,17 @@ class IdleState(MotionState):
         current_gait,
         cur_frame,
     ):
+        print(desired_vel_list[1])
         if np.linalg.norm(desired_vel_list[1]) > 0.2:
+            cosangle = np.dot(desired_vel_list[0], desired_vel_list[1]) / (
+                np.linalg.norm(desired_vel_list[0])
+                * np.linalg.norm(desired_vel_list[1])
+            )
+            angle = np.arccos(cosangle)
+            if angle > 0.5:
+                return WalkTurnRightState()
+            elif angle < -0.5:
+                return WalkTurnLeftState()
             return WalkForwardState()
         else:
             return None
@@ -109,10 +122,40 @@ class WalkTurnRightState(MotionState):
     def __init__(self) -> None:
         MotionState.__init__(self, "lab2/motion_material/walk_and_ture_right.bvh", True)
 
+    def check_trans(
+        self,
+        desired_pos_list,
+        desired_rot_list,
+        desired_vel_list,
+        desired_avel_list,
+        current_gait,
+        cur_frame,
+    ):
+        play_frame = cur_frame - self.start_frame
+        if play_frame > self.motion.motion_length - 1:
+            return WalkForwardState()
+        else:
+            return None
+
 
 class WalkTurnLeftState(MotionState):
     def __init__(self) -> None:
         MotionState.__init__(self, "lab2/motion_material/walk_and_turn_left.bvh", True)
+
+    def check_trans(
+        self,
+        desired_pos_list,
+        desired_rot_list,
+        desired_vel_list,
+        desired_avel_list,
+        current_gait,
+        cur_frame,
+    ):
+        play_frame = cur_frame - self.start_frame
+        if play_frame > self.motion.motion_length - 1:
+            return WalkForwardState()
+        else:
+            return None
 
 
 class WalkForwardState(MotionState):
@@ -190,11 +233,11 @@ class MotionStatemachine:
             cur_frame,
         )
         if new_state != None:
-            self.cur_state.end(cur_frame)
+            pos, facing_axis = self.cur_state.end(cur_frame)
             # if self.cur_state.is_blend :
             #     self.cur_state = BlendState(self.cur_state, new_state)
             # else:
-            new_state.start(cur_frame, self.cur_state)
+            new_state.start(cur_frame, pos, facing_axis)
             print(type(self.cur_state).__name__ + "->" + type(new_state).__name__)
             self.cur_state = new_state
         return self.cur_state.update(cur_frame)
