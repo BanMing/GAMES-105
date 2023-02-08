@@ -2,22 +2,61 @@
 
 from answer_task1 import *
 from motion_state_machine import *
+from direct.gui.OnscreenText import OnscreenText
+
+draw_info = False
+pos_texts = []
+rot_texts = []
+vel_texts = []
+avel_texts = []
+text_len = 6
+
+
+def init_draw_input_info():
+    if ~draw_info:
+        return
+    pos_texts.append(OnscreenText(text="desired_pos_list", pos=(-1, 0.9)))
+    for i in range(text_len):
+        pos_texts.append(OnscreenText(text="nil", pos=(-1, 0.9 - (1 + i) * 0.1)))
+
+    rot_texts.append(OnscreenText(text="desired_rot_list", pos=(-1, 0.2)))
+    for i in range(text_len):
+        rot_texts.append(OnscreenText(text="nil", pos=(-1, 0.2 - (1 + i) * 0.1)))
+
+    vel_texts.append(OnscreenText(text="desired_vel_list", pos=(0.5, 0.9)))
+    for i in range(text_len):
+        vel_texts.append(OnscreenText(text="nil", pos=(0.7, 0.9 - (1 + i) * 0.1)))
+
+    avel_texts.append(OnscreenText(text="desired_avel_list", pos=(0.5, 0.2)))
+    for i in range(text_len):
+        avel_texts.append(OnscreenText(text="nil", pos=(0.7, 0.2 - (1 + i) * 0.1)))
+
+
+def draw_input_info(
+    desired_pos_list,
+    desired_rot_list,
+    desired_vel_list,
+    desired_avel_list,
+):
+    if ~draw_info:
+        return
+    for i in range(text_len):
+        pos_texts[i + 1].text = str(desired_pos_list[i])
+        rot_texts[i + 1].text = str(desired_rot_list[i])
+        vel_texts[i + 1].text = str(desired_vel_list[i])
+        avel_texts[i + 1].text = str(desired_avel_list[i])
 
 
 class CharacterController:
     def __init__(self, controller) -> None:
         self.motions = []
         self.motions.append(BVHMotion("lab2/motion_material/idle.bvh"))
-        # # self.motions.append(BVHMotion('lab2/motion_material/run_forward.bvh'))
-        # # self.motions.append(BVHMotion('lab2/motion_material/walk_and_ture_right.bvh'))
-        # # self.motions.append(BVHMotion('lab2/motion_material/walk_and_turn_left.bvh'))
-        # # self.motions.append(BVHMotion('lab2/motion_material/walk_forward.bvh'))
-        # self.motions.append(BVHMotion("lab2/motion_material/walkF.bvh"))
         self.controller = controller
         self.cur_root_pos = None
         self.cur_root_rot = None
         self.cur_frame = 0
         self.motion_state_machine = MotionStatemachine()
+        init_draw_input_info()
         pass
 
     def update_state(
@@ -58,6 +97,9 @@ class CharacterController:
         # self.cur_root_pos = joint_translation[0]
         # self.cur_root_rot = joint_orientation[0]
         # self.cur_frame = (self.cur_frame + 1) % self.motions[0].motion_length
+        draw_input_info(
+            desired_pos_list, desired_rot_list, desired_vel_list, desired_avel_list
+        )
         (
             joint_name,
             joint_translation,

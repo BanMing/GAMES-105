@@ -2,6 +2,7 @@ from answer_task1 import *
 import numpy as np
 import copy
 from scipy.spatial.transform import Rotation as R
+from direct.gui.OnscreenText import OnscreenText
 
 mix_time = 10
 
@@ -102,13 +103,14 @@ class IdleState(MotionState):
         current_gait,
         cur_frame,
     ):
-        print(desired_vel_list[1])
-        if np.linalg.norm(desired_vel_list[1]) > 0.2:
-            cosangle = np.dot(desired_vel_list[0], desired_vel_list[1]) / (
+        # print(desired_vel_list[1])
+        if np.linalg.norm(desired_vel_list[-1]) > 0.2:
+            cosangle = np.dot(desired_vel_list[0], desired_vel_list[-1]) / (
                 np.linalg.norm(desired_vel_list[0])
-                * np.linalg.norm(desired_vel_list[1])
+                * np.linalg.norm(desired_vel_list[-1])
             )
             angle = np.arccos(cosangle)
+            print(cosangle, angle)
             if angle > 0.5:
                 return WalkTurnRightState()
             elif angle < -0.5:
@@ -211,6 +213,9 @@ class BlendState(MotionState):
             return self.next_state
 
 
+test_text = OnscreenText(text="desired_vel_list", pos=(0, -0.9))
+
+
 class MotionStatemachine:
     def __init__(self) -> None:
         self.cur_state = IdleState()
@@ -224,20 +229,25 @@ class MotionStatemachine:
         current_gait,
         cur_frame,
     ):
-        new_state = self.cur_state.check_trans(
-            desired_pos_list,
-            desired_rot_list,
-            desired_vel_list,
-            desired_avel_list,
-            current_gait,
-            cur_frame,
+        cosangle = np.dot(desired_pos_list[0], desired_pos_list[-1]) / (
+            np.linalg.norm(desired_pos_list[0]) * np.linalg.norm(desired_pos_list[-1])
         )
-        if new_state != None:
-            pos, facing_axis = self.cur_state.end(cur_frame)
-            # if self.cur_state.is_blend :
-            #     self.cur_state = BlendState(self.cur_state, new_state)
-            # else:
-            new_state.start(cur_frame, pos, facing_axis)
-            print(type(self.cur_state).__name__ + "->" + type(new_state).__name__)
-            self.cur_state = new_state
+        angle = np.rad2deg(np.arccos(cosangle))
+        test_text.text = "cosangle:{0:.3f} angle:{1:.3f}".format(cosangle, angle)
+        # new_state = self.cur_state.check_trans(
+        #     desired_pos_list,
+        #     desired_rot_list,
+        #     desired_vel_list,
+        #     desired_avel_list,
+        #     current_gait,
+        #     cur_frame,
+        # )
+        # if new_state != None:
+        #     pos, facing_axis = self.cur_state.end(cur_frame)
+        #     # if self.cur_state.is_blend :
+        #     #     self.cur_state = BlendState(self.cur_state, new_state)
+        #     # else:
+        #     new_state.start(cur_frame, pos, facing_axis)
+        #     print(type(self.cur_state).__name__ + "->" + type(new_state).__name__)
+        #     self.cur_state = new_state
         return self.cur_state.update(cur_frame)
