@@ -4,7 +4,7 @@ from answer_task1 import *
 from motion_state_machine import *
 from direct.gui.OnscreenText import OnscreenText
 
-draw_info = False
+draw_info = True
 pos_texts = []
 rot_texts = []
 vel_texts = []
@@ -13,7 +13,7 @@ text_len = 6
 
 
 def init_draw_input_info():
-    if ~draw_info:
+    if not draw_info:
         return
     pos_texts.append(OnscreenText(text="desired_pos_list", pos=(-1, 0.9)))
     for i in range(text_len):
@@ -38,11 +38,11 @@ def draw_input_info(
     desired_vel_list,
     desired_avel_list,
 ):
-    if ~draw_info:
+    if not draw_info:
         return
     for i in range(text_len):
         pos_texts[i + 1].text = str(desired_pos_list[i])
-        rot_texts[i + 1].text = str(desired_rot_list[i])
+        rot_texts[i + 1].text = str(np.rad2deg(np.arccos(desired_rot_list[i][-1]) * 2))
         vel_texts[i + 1].text = str(desired_vel_list[i])
         avel_texts[i + 1].text = str(desired_avel_list[i])
 

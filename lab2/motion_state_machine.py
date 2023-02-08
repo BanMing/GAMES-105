@@ -103,26 +103,35 @@ class IdleState(MotionState):
         current_gait,
         cur_frame,
     ):
+        angle0 = np.rad2deg(np.arccos(desired_rot_list[0][-1]) * 2)
+        angle1 = np.rad2deg(np.arccos(desired_rot_list[1][-1]) * 2)
+        if angle1 - angle0 > 10:
+            # turn right
+            return WalkTurnRightState()
+        elif angle1 - angle0 < -10:
+            # turn left
+            return WalkTurnLeftState()
         # print(desired_vel_list[1])
-        if np.linalg.norm(desired_vel_list[-1]) > 0.2:
-            cosangle = np.dot(desired_vel_list[0], desired_vel_list[-1]) / (
-                np.linalg.norm(desired_vel_list[0])
-                * np.linalg.norm(desired_vel_list[-1])
-            )
-            angle = np.arccos(cosangle)
-            print(cosangle, angle)
-            if angle > 0.5:
-                return WalkTurnRightState()
-            elif angle < -0.5:
-                return WalkTurnLeftState()
-            return WalkForwardState()
-        else:
-            return None
+        # if np.linalg.norm(desired_vel_list[-1]) > 0.2:
+        #     cosangle = np.dot(desired_vel_list[0], desired_vel_list[-1]) / (
+        #         np.linalg.norm(desired_vel_list[0])
+        #         * np.linalg.norm(desired_vel_list[-1])
+        #     )
+        #     angle = np.arccos(cosangle)
+        #     print(cosangle, angle)
+        #     if angle > 0.5:
+        #         return WalkTurnRightState()
+        #     elif angle < -0.5:
+        #         return WalkTurnLeftState()
+        #     return WalkForwardState()
+        # else:
+        #     return None
+        return None
 
 
 class WalkTurnRightState(MotionState):
     def __init__(self) -> None:
-        MotionState.__init__(self, "lab2/motion_material/walk_and_ture_right.bvh", True)
+        MotionState.__init__(self, "lab2/motion_material/walk_and_ture_right.bvh", False)
 
     def check_trans(
         self,
@@ -135,14 +144,14 @@ class WalkTurnRightState(MotionState):
     ):
         play_frame = cur_frame - self.start_frame
         if play_frame > self.motion.motion_length - 1:
-            return WalkForwardState()
+            return IdleState()
         else:
             return None
 
 
 class WalkTurnLeftState(MotionState):
     def __init__(self) -> None:
-        MotionState.__init__(self, "lab2/motion_material/walk_and_turn_left.bvh", True)
+        MotionState.__init__(self, "lab2/motion_material/walk_and_turn_left.bvh", False)
 
     def check_trans(
         self,
@@ -155,7 +164,7 @@ class WalkTurnLeftState(MotionState):
     ):
         play_frame = cur_frame - self.start_frame
         if play_frame > self.motion.motion_length - 1:
-            return WalkForwardState()
+            return IdleState()
         else:
             return None
 
@@ -229,25 +238,31 @@ class MotionStatemachine:
         current_gait,
         cur_frame,
     ):
+
+        rot = desired_rot_list[0] - desired_rot_list[6]
+        a = R.from_quat(desired_rot_list[0])
+        b = R.from_quat(desired_rot_list[-1])
+
+        # print(angle0,angle1)
         cosangle = np.dot(desired_pos_list[0], desired_pos_list[-1]) / (
             np.linalg.norm(desired_pos_list[0]) * np.linalg.norm(desired_pos_list[-1])
         )
         angle = np.rad2deg(np.arccos(cosangle))
         test_text.text = "cosangle:{0:.3f} angle:{1:.3f}".format(cosangle, angle)
-        # new_state = self.cur_state.check_trans(
-        #     desired_pos_list,
-        #     desired_rot_list,
-        #     desired_vel_list,
-        #     desired_avel_list,
-        #     current_gait,
-        #     cur_frame,
-        # )
-        # if new_state != None:
-        #     pos, facing_axis = self.cur_state.end(cur_frame)
-        #     # if self.cur_state.is_blend :
-        #     #     self.cur_state = BlendState(self.cur_state, new_state)
-        #     # else:
-        #     new_state.start(cur_frame, pos, facing_axis)
-        #     print(type(self.cur_state).__name__ + "->" + type(new_state).__name__)
-        #     self.cur_state = new_state
+        new_state = self.cur_state.check_trans(
+            desired_pos_list,
+            desired_rot_list,
+            desired_vel_list,
+            desired_avel_list,
+            current_gait,
+            cur_frame,
+        )
+        if new_state != None:
+            pos, facing_axis = self.cur_state.end(cur_frame)
+            # if self.cur_state.is_blend :
+            #     self.cur_state = BlendState(self.cur_state, new_state)
+            # else:
+            new_state.start(cur_frame, pos, facing_axis)
+            print(type(self.cur_state).__name__ + "->" + type(new_state).__name__)
+            self.cur_state = new_state
         return self.cur_state.update(cur_frame)
