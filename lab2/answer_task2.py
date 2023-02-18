@@ -4,7 +4,8 @@ from answer_task1 import *
 from motion_state_machine import *
 from direct.gui.OnscreenText import OnscreenText
 
-draw_info = True
+draw_info = False
+
 pos_texts = []
 rot_texts = []
 vel_texts = []

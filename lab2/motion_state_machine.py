@@ -104,13 +104,17 @@ class IdleState(MotionState):
         cur_frame,
     ):
         angle0 = np.rad2deg(np.arccos(desired_rot_list[0][-1]) * 2)
-        angle1 = np.rad2deg(np.arccos(desired_rot_list[1][-1]) * 2)
-        if angle1 - angle0 > 10:
+        angle1 = np.rad2deg(np.arccos(desired_rot_list[-1][-1]) * 2)
+        if angle1 - angle0 > 20:
             # turn right
+            print(angle1, angle0)
             return WalkTurnRightState()
-        elif angle1 - angle0 < -10:
+        elif angle1 - angle0 < -20:
+            print(angle1, angle0)
             # turn left
             return WalkTurnLeftState()
+        elif 0 < angle1 - angle0 < 20:
+            return WalkForwardState()
         # print(desired_vel_list[1])
         # if np.linalg.norm(desired_vel_list[-1]) > 0.2:
         #     cosangle = np.dot(desired_vel_list[0], desired_vel_list[-1]) / (
@@ -131,7 +135,10 @@ class IdleState(MotionState):
 
 class WalkTurnRightState(MotionState):
     def __init__(self) -> None:
-        MotionState.__init__(self, "lab2/motion_material/walk_and_ture_right.bvh", False)
+        MotionState.__init__(
+            self, "lab2/motion_material/walk_and_ture_right.bvh", False
+        )
+        self.motion = self.motion.sub_sequence(80, 110)
 
     def check_trans(
         self,
@@ -152,6 +159,7 @@ class WalkTurnRightState(MotionState):
 class WalkTurnLeftState(MotionState):
     def __init__(self) -> None:
         MotionState.__init__(self, "lab2/motion_material/walk_and_turn_left.bvh", False)
+        self.motion = self.motion.sub_sequence(0, 50)
 
     def check_trans(
         self,
@@ -244,11 +252,13 @@ class MotionStatemachine:
         b = R.from_quat(desired_rot_list[-1])
 
         # print(angle0,angle1)
-        cosangle = np.dot(desired_pos_list[0], desired_pos_list[-1]) / (
-            np.linalg.norm(desired_pos_list[0]) * np.linalg.norm(desired_pos_list[-1])
-        )
-        angle = np.rad2deg(np.arccos(cosangle))
-        test_text.text = "cosangle:{0:.3f} angle:{1:.3f}".format(cosangle, angle)
+        # cosangle = np.dot(desired_pos_list[0], desired_pos_list[-1]) / (
+        #     np.linalg.norm(desired_pos_list[0]) * np.linalg.norm(desired_pos_list[-1])
+        # )
+        angle0 = np.rad2deg(np.arccos(desired_rot_list[0][-1]) * 2)
+        angle1 = np.rad2deg(np.arccos(desired_rot_list[-1][-1]) * 2)
+        # angle = np.rad2deg(np.arccos(cosangle))
+        test_text.text = "angle0:{0:.3f} angle1:{1:.3f}".format(angle0, angle1)
         new_state = self.cur_state.check_trans(
             desired_pos_list,
             desired_rot_list,
