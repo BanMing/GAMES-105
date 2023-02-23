@@ -36,7 +36,7 @@ def part2_skinning_animation(viewer, translations, orientations, T_pose, skinnin
 
 def main():
     viewer = MeshViewer()
-    bvh = BVHMotion('motion_material/motion.bvh')
+    bvh = BVHMotion('labS/motion_material/motion.bvh')
     skinning_weight , name_list, idx, value = viewer.get_skinning_matrix()
     bvh.adjust_joint_name(name_list)
     translations, orientations = bvh.batch_forward_kinematics()
